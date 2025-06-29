@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HealthCare Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .chat-container {
+        height: calc(100vh - 160px);
+      }
+      .message {
+        max-width: 80%;
+      }
+      .typing-indicator {
+        display: inline-block;
+      }
+      .typing-indicator span {
+        height: 8px;
+        width: 8px;
+        background-color: #4b5563;
+        border-radius: 50%;
+        display: inline-block;
+        margin: 0 2px;
+        opacity: 0.4;
+      }
+      .typing-indicator span:nth-child(1) {
+        animation: typing 1s infinite;
+      }
+      .typing-indicator span:nth-child(2) {
+        animation: typing 1s infinite 0.2s;
+      }
+      .typing-indicator span:nth-child(3) {
+        animation: typing 1s infinite 0.4s;
+      }
+      @keyframes typing {
+        0% {
+          opacity: 0.4;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.4;
+        }
+      }
+      .symptom-btn {
+        transition: all 0.2s;
+      }
+      .symptom-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <div class="container mx-auto max-w-4xl p-4">
+      <!-- Chat Container -->
+      <div
+        class="bg-white rounded-lg shadow-md p-4 chat-container overflow-y-auto"
+      >
+        <div id="chat-messages" class="space-y-4">
+          <!-- Bot welcome message -->
+          <div class="flex items-start">
+            <div class="bg-blue-100 p-3 rounded-full mr-3">
+              <i class="fas fa-robot text-blue-600"></i>
+            </div>
+            <div
+              class="message bg-blue-50 text-gray-800 p-4 rounded-lg rounded-tl-none"
+            >
+              <p class="font-medium">Hello! I'm your HealthCare Assistant.</p>
+              <p>
+                How can I help you today? You can ask about symptoms,
+                medications, or general health advice.
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                  onclick="quickQuestion('I have a headache')"
+                  class="symptom-btn bg-white text-blue-600 px-3 py-1 rounded-full text-sm border border-blue-200 hover:bg-blue-50"
+                >
+                  <i class="fas fa-head-side-cough mr-1"></i> Headache
+                </button>
+                <button
+                  onclick="quickQuestion('I have a fever')"
+                  class="symptom-btn bg-white text-blue-600 px-3 py-1 rounded-full text-sm border border-blue-200 hover:bg-blue-50"
+                >
+                  <i class="fas fa-temperature-high mr-1"></i> Fever
+                </button>
+                <button
+                  onclick="quickQuestion('I have stomach pain')"
+                  class="symptom-btn bg-white text-blue-600 px-3 py-1 rounded-full text-sm border border-blue-200 hover:bg-blue-50"
+                >
+                  <i class="fas fa-stomach mr-1"></i> Stomach pain
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="bg-white rounded-lg shadow-md p-4 mt-4">
+        <div class="flex items-center">
+          <input
+            id="user-input"
+            type="text"
+            placeholder="Type your health concern..."
+            class="flex-1 border border-gray-300 rounded-l-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onkeypress="handleKeyPress(event)"
+          />
+          <button
+            onclick="sendMessage()"
+            class="bg-blue-600 text-white px-5 py-3 rounded-r-lg hover:bg-blue-700 transition"
+          >
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+        <div class="mt-3 flex justify-between text-xs text-gray-500">
+          <div>
+            <button
+              onclick="showEmergencyOptions()"
+              class="text-red-500 hover:text-red-700"
+            >
+              <i class="fas fa-exclamation-triangle mr-1"></i> Emergency Help
+            </button>
+          </div>
+          <div>
+            <button
+              onclick="showQuickOptions()"
+              class="text-blue-500 hover:text-blue-700"
+            >
+              <i class="fas fa-bolt mr-1"></i> Quick Options
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Sample responses for different health concerns
+      const responses = {
+        headache: {
+          message:
+            "Headaches can have various causes. Try drinking water, resting in a quiet room, and taking over-the-counter pain relievers like acetaminophen or ibuprofen if appropriate. If the headache is severe, persistent, or accompanied by other symptoms like vision changes or confusion, seek medical attention immediately.",
+          followUp:
+            "Would you like me to help you assess if this might be a migraine or tension headache?",
+        },
+        fever: {
+          message:
+            "A fever is usually a sign your body is fighting an infection. For adults, if your temperature is below 102°F (38.9°C), rest and drink plenty of fluids. You can take acetaminophen or ibuprofen to reduce fever. Seek medical attention if the fever is above 103°F (39.4°C), lasts more than 3 days, or is accompanied by severe symptoms.",
+          followUp:
+            "Are you experiencing any other symptoms along with the fever?",
+        },
+        "stomach pain": {
+          message:
+            "Stomach pain can result from many causes including indigestion, food poisoning, or infections. Try resting, drinking clear fluids, and avoiding solid food for a few hours. If the pain is severe, persistent, or accompanied by vomiting blood, high fever, or difficulty breathing, seek medical help immediately.",
+          followUp:
+            "Can you describe the type of pain (cramping, sharp, dull) and its location?",
+        },
+        cough: {
+          message:
+            "Coughs are often caused by colds, flu, or allergies. Stay hydrated, use cough drops, and consider over-the-counter cough medicine if appropriate. If the cough persists more than 3 weeks, produces blood, or is accompanied by difficulty breathing, see a doctor.",
+          followUp: "Is your cough dry or producing mucus?",
+        },
+        emergency: {
+          message:
+            "🚨 If you're experiencing a medical emergency such as chest pain, difficulty breathing, severe bleeding, or signs of stroke (FAST: Face drooping, Arm weakness, Speech difficulty, Time to call emergency services), please call your local emergency number immediately. This chatbot cannot replace emergency medical care.",
+          followUp:
+            "Would you like me to help you locate the nearest emergency facility?",
+        },
+      };
+
+      // Add a message to the chat
+      function addMessage(sender, message, isHtml = false) {
+        const chatMessages = document.getElementById("chat-messages");
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `flex items-start ${
+          sender === "user" ? "justify-end" : ""
+        }`;
+
+        if (sender === "bot") {
+          messageDiv.innerHTML = `
+                    <div class="bg-blue-100 p-3 rounded-full mr-3">
+                        <i class="fas fa-robot text-blue-600"></i>
+                    </div>
+                    <div class="message bg-blue-50 text-gray-800 p-4 rounded-lg rounded-tl-none">
+                        ${isHtml ? message : `<p>${message}</p>`}
+                    </div>
+                `;
+        } else {
+          messageDiv.innerHTML = `
+                    <div class="message bg-gray-100 text-gray-800 p-4 rounded-lg rounded-tr-none">
+                        <p>${message}</p>
+                    </div>
+                    <div class="bg-gray-200 p-3 rounded-full ml-3">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                `;
+        }
+
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Show typing indicator
+      function showTypingIndicator() {
+        const chatMessages = document.getElementById("chat-messages");
+
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "flex items-start";
+        typingDiv.id = "typing-indicator";
+        typingDiv.innerHTML = `
+                <div class="bg-blue-100 p-3 rounded-full mr-3">
+                    <i class="fas fa-robot text-blue-600"></i>
+                </div>
+                <div class="message bg-blue-50 text-gray-800 p-4 rounded-lg rounded-tl-none">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Hide typing indicator
+      function hideTypingIndicator() {
+        const typingIndicator = document.getElementById("typing-indicator");
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+      }
+
+      // Process user message and generate response
+      async function processUserMessage(message) {
+        // Show typing indicator
+        showTypingIndicator();
+        try {
+          const res = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message })
+          });
+          const data = await res.json();
+          hideTypingIndicator();
+          if (data.reply) {
+            addMessage("bot", data.reply);
+          } else {
+            addMessage("bot", "Sorry, I did not get a valid response from the AI.");
+          }
+        } catch (error) {
+          hideTypingIndicator();
+          // Fallback: use the old static logic if backend fails
+          const lowerMessage = message.toLowerCase();
+          let response = null;
+          if (
+            lowerMessage.includes("headache") ||
+            lowerMessage.includes("head ache")
+          ) {
+            response = responses.headache;
+          } else if (
+            lowerMessage.includes("fever") ||
+            lowerMessage.includes("temperature")
+          ) {
+            response = responses.fever;
+          } else if (
+            lowerMessage.includes("stomach") ||
+            lowerMessage.includes("abdominal") ||
+            lowerMessage.includes("belly")
+          ) {
+            response = responses["stomach pain"];
+          } else if (
+            lowerMessage.includes("cough")
+          ) {
+            response = responses.cough;
+          } else if (
+            lowerMessage.includes("emergency") ||
+            lowerMessage.includes("help")
+          ) {
+            response = responses.emergency;
+          } else {
+            response = {
+              message:
+                "I'm sorry, I couldn't understand your concern. Could you please provide more details or try rephrasing your question?",
+              followUp:
+                "You might want to ask about symptoms, medications, or first aid.",
+            };
+          }
+          addMessage("bot", response.message);
+          if (response.followUp) {
+            setTimeout(() => {
+              addMessage("bot", response.followUp);
+            }, 800);
+          }
+        }
+      }
+
+      // Send message from user input
+      function sendMessage() {
+        const userInput = document.getElementById("user-input");
+        const message = userInput.value.trim();
+
+        if (message) {
+          addMessage("user", message);
+          userInput.value = "";
+          processUserMessage(message);
+        }
+      }
+
+      // Handle Enter key press
+      function handleKeyPress(event) {
+        if (event.key === "Enter") {
+          sendMessage();
+        }
+      }
+
+      // Quick question buttons
+      function quickQuestion(question) {
+        addMessage("user", question);
+        processUserMessage(question);
+      }
+
+      // Show emergency options
+      function showEmergencyOptions() {
+        const html = `
+                <p class="font-medium text-red-600">Emergency Assistance Options:</p>
+                <div class="mt-2 space-y-2">
+                    <button onclick="quickQuestion('I need emergency help')" class="w-full text-left p-2 bg-red-50 text-red-700 rounded hover:bg-red-100">
+                        <i class="fas fa-ambulance mr-2"></i> Call Emergency Services
+                    </button>
+                    <button onclick="quickQuestion('I think I might be having a heart attack')" class="w-full text-left p-2 bg-red-50 text-red-700 rounded hover:bg-red-100">
+                        <i class="fas fa-heartbeat mr-2"></i> Heart Attack Symptoms
+                    </button>
+                    <button onclick="quickQuestion('I think I might be having a stroke')" class="w-full text-left p-2 bg-red-50 text-red-700 rounded hover:bg-red-100">
+                        <i class="fas fa-brain mr-2"></i> Stroke Symptoms
+                    </button>
+                </div>
+            `;
+        addMessage("bot", html, true);
+      }
+
+      // Show quick options
+      function showQuickOptions() {
+        const html = `
+                <p class="font-medium text-blue-600">Quick Health Topics:</p>
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                    <button onclick="quickQuestion('How to treat a cold')" class="text-left p-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                        <i class="fas fa-snowflake mr-2"></i> Cold Remedies
+                    </button>
+                    <button onclick="quickQuestion('How to stop allergies')" class="text-left p-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                        <i class="fas fa-allergies mr-2"></i> Allergies
+                    </button>
+                    <button onclick="quickQuestion('How to relieve back pain')" class="text-left p-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                        <i class="fas fa-bed mr-2"></i> Back Pain
+                    </button>
+                    <button onclick="quickQuestion('How to treat a burn')" class="text-left p-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
+                        <i class="fas fa-fire mr-2"></i> Burns
+                    </button>
+                </div>
+            `;
+        addMessage("bot", html, true);
+      }
+    </script>
+  </body>
+</html>
